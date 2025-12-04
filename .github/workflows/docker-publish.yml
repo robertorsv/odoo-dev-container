@@ -10,7 +10,6 @@ env:
   # Use docker.io for Docker Hub if empty
   REGISTRY: ghcr.io
 
-
 jobs:
   build:
 
@@ -18,6 +17,7 @@ jobs:
     permissions:
       contents: read
       packages: write
+      attestations: write
       # This is used to complete the identity challenge
       # with sigstore/fulcio when running outside of PRs.
       id-token: write
@@ -41,6 +41,11 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Convert repository owner to lowercase for GHCR compatibility
+      - name: Set image owner
+        run: |
+          echo "IMAGE_OWNER=${GITHUB_REPOSITORY_OWNER,,}" >> $GITHUB_ENV
 
       # Download .deb package with curl from the provided URL in the ./devcontainer/URL.txt file
       - name: Download odoo.deb package
@@ -75,7 +80,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ github.actor }}/odoo-v${{ env.ODOO_MAIN_VERSION }}-${{ env.ODOO_TYPE }}
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/odoo-v${{ env.ODOO_MAIN_VERSION }}-${{ env.ODOO_TYPE }}
           tags: |
             type=raw,value=${{ env.ODOO_DEB_VERSION }}
             type=raw,value=latest,enable=${{ env.IS_LATEST }}
@@ -94,3 +99,4 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          provenance: false
